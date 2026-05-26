@@ -631,6 +631,52 @@ input[type=date]{color-scheme:dark}
   .card::before{display:none}
 }
 </style>
+
+<!-- ── FIREBASE SDK ── -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+const _fbConfig={
+  apiKey:"AIzaSyC8EnkvTjkT1wesnMnaDPg80xNrUkIgTBM",
+  authDomain:"cvco-amira.firebaseapp.com",
+  databaseURL:"https://cvco-amira-default-rtdb.firebaseio.com",
+  projectId:"cvco-amira",
+  storageBucket:"cvco-amira.firebasestorage.app",
+  messagingSenderId:"605097301628",
+  appId:"1:605097301628:web:67060b4e88bf5cb0d49bf9"
+};
+firebase.initializeApp(_fbConfig);
+const _db=firebase.database();
+const _REF_S=_db.ref('cvco/state');
+const _REF_DEL=_db.ref('cvco/deleted');
+const _REF_DL=_db.ref('cvco/deadline');
+
+// Sync em tempo real — quando outro dispositivo salva, atualiza aqui
+_REF_S.on('value',snap=>{
+  const v=snap.val();
+  if(v&&JSON.stringify(v)!==JSON.stringify(S)){
+    S=v;
+    if(typeof buildFlow==='function'){buildFlow();updateDash();calcCd();}
+    const si=document.getElementById('save-ind');
+    if(si){si.textContent='↻ sincronizado';setTimeout(()=>{si.textContent='● salvo';},1800);}
+  }
+});
+_REF_DEL.on('value',snap=>{
+  const v=snap.val();
+  if(v&&JSON.stringify(v)!==JSON.stringify(deletedCards)){
+    deletedCards=v||[];
+    if(typeof renderUndoTray==='function')renderUndoTray();
+  }
+});
+_REF_DL.on('value',snap=>{
+  const v=snap.val();
+  if(v){
+    try{localStorage.setItem('cvco_deadline',v);if(typeof _REF_DL!=='undefined')_REF_DL.set(v);}catch(e){}
+    if(typeof calcCd==='function')calcCd();
+  }
+});
+</script>
+
 </head>
 <body>
 
@@ -1383,8 +1429,38 @@ let S=BACKUP_DATA;
 try{const _s=localStorage.getItem(KEY);if(_s)S=JSON.parse(_s);}catch(e){}
 let deletedCards=BACKUP_DELETED;
 try{const _d=localStorage.getItem(KEY+'_del');if(_d)deletedCards=JSON.parse(_d);}catch(e){}
+// Carga inicial do Firebase (sobrescreve localStorage se houver dados na nuvem)
+window.addEventListener('load',()=>{
+  try{
+    if(typeof _REF_S!=='undefined'){
+      _REF_S.once('value',snap=>{
+        const v=snap.val();
+        if(v){S=v;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+        _REF_DEL.once('value',sd=>{
+          const d=sd.val();
+          if(d){deletedCards=d;try{localStorage.setItem(KEY+'_del',JSON.stringify(deletedCards));}catch(e){}}
+          _REF_DL.once('value',sdl=>{
+            const dl=sdl.val();
+            if(dl){try{localStorage.setItem('cvco_deadline',dl);}catch(e){}}
+            buildFlow();updateDash();calcCd();renderUndoTray();setTimeout(markOverdueCards,500);
+          });
+        });
+      });
+    }
+  }catch(e){buildFlow();updateDash();calcCd();renderUndoTray();setTimeout(markOverdueCards,500);}
+});
 
-function persist(){try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(KEY+'_del',JSON.stringify(deletedCards));}catch(e){}}
+function persist(){
+  try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(KEY+'_del',JSON.stringify(deletedCards));}catch(e){}
+  try{
+    if(typeof _REF_S!=='undefined'){
+      _REF_S.set(S);
+      _REF_DEL.set(deletedCards);
+      const si=document.getElementById('save-ind');
+      if(si){si.textContent='↑ salvando...';setTimeout(()=>{si.textContent='● salvo';},1200);}
+    }
+  }catch(e){}
+}
 function eff(id){
   const def=LAYERS.flatMap(l=>l.phases).flatMap(p=>p.items).find(it=>it.id===id)?.def||'pendencias';
   return S[id]?.status||def;
@@ -2298,11 +2374,10 @@ storedDeleted.forEach(id=>{
   const it=LAYERS.flatMap(l=>l.phases).flatMap(p=>p.items).find(i=>i.id===id);
   if(it)deletedCards.push({id,name:S[id]?.title||it.t});
 });
-buildFlow();
-updateDash();
-calcCd();
-renderUndoTray();
-setTimeout(markOverdueCards,500);
+// Renderização inicial: Firebase fará isso via window.load se disponível
+if(typeof firebase==='undefined'){
+  buildFlow();updateDash();calcCd();renderUndoTray();setTimeout(markOverdueCards,500);
+}
 </script>
 <!-- ── COPYRIGHT FOOTER ── -->
 <div style="
