@@ -125,6 +125,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .s-sol{background:var(--abg);color:var(--amber)}
 .s-att{background:var(--abg);color:var(--amber)}
 .s-and{background:var(--bbg);color:var(--blue)}
+/* RELATÓRIO */
+.rel-error{background:var(--rbg);border:1px solid var(--rbd);border-radius:8px;padding:1rem;color:var(--red);font-size:12px;font-family:var(--mono)}
+/* ATA TEXTO */
+.rel-txt{font-family:var(--font);font-size:13.5px;line-height:2;color:var(--text2);white-space:pre-wrap;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.3rem 1.5rem}
+.rel-txt strong{color:var(--text);font-weight:700}
+.rel-txt .rel-cabecalho{color:var(--text3);font-family:var(--mono);font-size:11.5px}
 .sum-progress-bar{height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;margin:.4rem 0}
 .sum-progress-fill{height:100%;border-radius:4px;-webkit-transition:width .6s;transition:width .6s}
 .sum-layer-hdr{display:-webkit-flex;display:flex;-webkit-justify-content:space-between;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px;font-family:var(--mono)}
@@ -333,6 +339,20 @@ html.light input[type=date]{color-scheme:light}
 </head>
 <body>
 
+<!-- RELATÓRIO MODAL -->
+<div class="modal-overlay" id="relatorio-modal" onclick="if(event.target===this)closeRelatorio()">
+  <div class="modal" style="max-width:820px">
+    <div class="modal-hdr">
+      <div class="modal-title">📝 Ata de Reunião — Edifício Amira</div>
+      <div style="display:-webkit-flex;display:flex;gap:8px;-webkit-align-items:center;align-items:center">
+        <button class="hdr-btn" id="rel-copy-btn" onclick="copyRelatorio()" style="font-size:11px;padding:4px 12px;display:none">📋 Copiar texto</button>
+        <button class="modal-close" onclick="closeRelatorio()">✕</button>
+      </div>
+    </div>
+    <div id="relatorio-content" style="min-height:200px"></div>
+  </div>
+</div>
+
 <!-- EDIT CARD MODAL -->
 <div class="modal-overlay edit-card-modal" id="edit-card-modal" onclick="if(event.target===this)closeEditCard()">
   <div class="modal">
@@ -376,6 +396,7 @@ html.light input[type=date]{color-scheme:light}
     <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Modo claro/noite">🌙</button>
     <button class="hdr-btn" id="edit-mode-btn" onclick="toggleEditMode()" title="Ativar modo edição">✏️ Editar</button>
     <button class="hdr-btn" onclick="openSummary()" title="Resumo do status atual">📋 Resumo</button>
+    <button class="hdr-btn" onclick="openRelatorio()" title="Gerar ata de reunião" style="background:rgba(127,255,110,0.12);border-color:rgba(127,255,110,0.40);color:var(--accent);font-weight:600">📝 Ata Reunião</button>
     <button class="hdr-btn" onclick="exportBackup()" title="Exportar dados em JSON">📤 Exportar</button>
     <label class="hdr-btn" title="Importar dados de JSON" style="cursor:pointer">
       📥 Importar<input type="file" accept=".json" onchange="importBackup(event)" style="display:none">
@@ -458,10 +479,6 @@ html.light input[type=date]{color-scheme:light}
     <button class="tbtn" id="fb-pendencias" onclick="filt('pendencias')">✗ Pendências</button>
     <button class="tbtn" id="fb-atencao" onclick="filt('atencao')">⚡ Atenção</button>
     <button class="tbtn" id="fb-andamento" onclick="filt('andamento')">🔵 Em andamento</button>
-    <span style="display:inline-flex;align-items:center;gap:5px;margin-left:6px">
-      <input type="checkbox" id="hide-blockers" onchange="toggleBlockers()">
-      <label for="hide-blockers" style="font-size:10px;font-family:var(--mono);color:var(--text2);cursor:pointer">Ocultar bloqueantes</label>
-    </span>
     <div style="flex:1"></div>
     <button class="tbtn" onclick="expandAll()">↕ Expandir</button>
     <button class="tbtn" onclick="window.print()">🖨 Imprimir</button>
@@ -1420,6 +1437,135 @@ function showMsg(msg,col){
   el.className='save-indicator '+(col==='green'?'synced':'');
   if(tx)tx.textContent=msg;
   setTimeout(()=>{el.className='save-indicator synced';if(tx)tx.textContent='Sincronizado';},3500);
+}
+
+
+// ── RELATÓRIO / ATA ───────────────────────────────────────────────────────────
+function buildContextoParaIA(){
+  var today=new Date();
+  var fmt=function(d){return d.toLocaleDateString('pt-BR');};
+  var nextWeek=new Date(today);nextWeek.setDate(today.getDate()+7);
+  var items=allItems().map(function(it){
+    var s=eff(it.id);
+    var resp=S[it.id]?S[it.id].resp||'':'';
+    var date=S[it.id]?S[it.id].date||'':'';
+    var notes=S[it.id]?S[it.id].notes||'':'';
+    var layer=LAYERS.find(function(l){return l.phases.some(function(p){return p.items.indexOf(it)>-1;});});
+    var phase=layer?layer.phases.find(function(p){return p.items.indexOf(it)>-1;}):null;
+    return{id:it.id,titulo:it.t,sub:it.s,status:s,bloqueante:it.bl,
+      responsavel:resp,dataPrevista:date,notas:notes,
+      camada:layer?layer.label:'',fase:phase?phase.ph:''};
+  });
+  var atrasados=items.filter(function(i){return i.dataPrevista&&new Date(i.dataPrevista)<today&&i.status!=='ok'&&i.status!=='andamento';});
+  var proxSemana=items.filter(function(i){return i.dataPrevista&&new Date(i.dataPrevista)>=today&&new Date(i.dataPrevista)<=nextWeek&&i.status!=='ok';});
+  var bloqueantes=items.filter(function(i){return i.bloqueante&&i.status!=='ok';});
+  var emAndamento=items.filter(function(i){return i.status==='andamento';});
+  var pendentes=items.filter(function(i){return i.status==='pendencias'||i.status==='solicitar';});
+  var cc=counts();
+  var prazo=getPrazo();
+  var diasPrazo=Math.floor((new Date(prazo)-today)/86400000);
+  return{dataHoje:fmt(today),prazoFinal:new Date(prazo).toLocaleDateString('pt-BR'),
+    diasParaPrazo:diasPrazo,totalItens:cc.total,totalOk:cc.ok,
+    percentualConcluido:Math.round(cc.ok/cc.total*100),
+    atrasados:atrasados,proxSemana:proxSemana,bloqueantes:bloqueantes,
+    emAndamento:emAndamento,pendentes:pendentes};
+}
+
+function formatItem(i){
+  var parts=[i.titulo];
+  if(i.fase)parts.push('Fase: '+i.fase);
+  if(i.status)parts.push('Status: '+i.status);
+  if(i.dataPrevista)parts.push('Data: '+i.dataPrevista);
+  if(i.responsavel)parts.push('Resp: '+i.responsavel);
+  if(i.notas)parts.push('Obs: '+i.notas.slice(0,100));
+  return '  \u2022 '+parts.join(' | ');
+}
+
+function openRelatorio(){
+  document.getElementById('relatorio-modal').classList.add('open');
+  document.body.style.overflow='hidden';
+  var content=document.getElementById('relatorio-content');
+  var copyBtn=document.getElementById('rel-copy-btn');
+
+  var ctx=buildContextoParaIA();
+  var fmtDate=function(iso){
+    if(!iso)return'';
+    var p=iso.split('-');if(p.length!==3)return iso;
+    return p[2]+'/'+p[1]+'/'+p[0];
+  };
+
+  var L=[];
+
+  // Cabeçalho: data + prazo + dias na mesma linha
+  L.push('Data: '+ctx.dataHoje+' | Prazo: '+ctx.prazoFinal+' ('+ctx.diasParaPrazo+' dias)');
+  L.push('');
+
+  // 1. Situação Geral
+  L.push('SITUAÇÃO GERAL PARA O CVCO:');
+  L.push('Progresso: '+ctx.percentualConcluido+'% concluído — '+ctx.totalOk+' de '+ctx.totalItens+' itens Ok');
+  L.push('');
+
+  // 2. Bloqueantes — só nome, sem fase/responsável
+  L.push('BLOQUEANTES ATIVOS:');
+  if(ctx.bloqueantes.length===0){
+    L.push('- Nenhum bloqueante ativo');
+  }else{
+    ctx.bloqueantes.forEach(function(i){L.push('- '+i.titulo);});
+  }
+  L.push('');
+
+  // 3. Prazos vencidos — só se houver
+  if(ctx.atrasados.length>0){
+    L.push('PRAZOS VENCIDOS:');
+    ctx.atrasados.forEach(function(i){
+      var linha='- '+i.titulo;
+      if(i.dataPrevista)linha+=' — venceu em '+fmtDate(i.dataPrevista);
+      L.push(linha);
+    });
+    L.push('');
+  }
+
+  // 4. Próximos 7 dias — só se houver
+  if(ctx.proxSemana.length>0){
+    L.push('ATIVIDADES PRÓXIMOS 7 DIAS:');
+    ctx.proxSemana.forEach(function(i){
+      var linha='- '+i.titulo+' — '+fmtDate(i.dataPrevista);
+      if(i.responsavel)linha+=' · Resp: '+i.responsavel;
+      L.push(linha);
+    });
+    L.push('');
+  }
+
+  var texto=L.join('\n').replace(/\n$/,'');
+
+  // Renderizar com destaque visual nos títulos de seção
+  var html=texto
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^(Data:.+)$/gm,'<span class="rel-cabecalho">$1</span>')
+    .replace(/^(SITUAÇÃO GERAL PARA O CVCO:|BLOQUEANTES ATIVOS:|PRAZOS VENCIDOS:|ATIVIDADES PRÓXIMOS 7 DIAS:)$/gm,'<strong>$1</strong>');
+
+  content.innerHTML='<div class="rel-txt">'+html+'</div>';
+  document.getElementById('relatorio-modal').dataset.rawText=texto;
+  copyBtn.style.display='';
+}
+
+function closeRelatorio(){
+  document.getElementById('relatorio-modal').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+function copyRelatorio(){
+  var txt=document.getElementById('relatorio-modal').dataset.rawText||'';
+  if(!txt)return;
+  var btn=document.getElementById('rel-copy-btn');
+  function done(){btn.textContent='\u2713 Copiado!';setTimeout(function(){btn.textContent='\uD83D\uDCCB Copiar texto';},2000);}
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done).catch(function(){
+      var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();done();
+    });
+  }else{
+    var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();done();
+  }
 }
 
 // ── PRAZO EDITÁVEL ────────────────────────────────────────────────────────────
