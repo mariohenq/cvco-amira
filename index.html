@@ -124,6 +124,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .s-pen{background:var(--rbg);color:var(--red)}
 .s-sol{background:var(--abg);color:var(--amber)}
 .s-att{background:var(--abg);color:var(--amber)}
+.s-and{background:var(--bbg);color:var(--blue)}
 .sum-progress-bar{height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;margin:.4rem 0}
 .sum-progress-fill{height:100%;border-radius:4px;-webkit-transition:width .6s;transition:width .6s}
 .sum-layer-hdr{display:-webkit-flex;display:flex;-webkit-justify-content:space-between;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px;font-family:var(--mono)}
@@ -216,6 +217,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2.5px;border-radius:9px 9px 0 0}
 .card.ok::before{background:var(--green)}
 .card.solicitar::before{background:var(--amber)}
+.card.andamento::before{background:var(--blue)}
 .card.pendencias::before{background:var(--red)}
 .card.atencao::before{background:-webkit-linear-gradient(90deg,var(--green),var(--amber));background:linear-gradient(90deg,var(--green),var(--amber))}
 .card:hover{border-color:var(--border2)}
@@ -236,6 +238,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .ssel.solicitar{color:var(--amber);border-color:var(--abd);background-color:var(--abg)}
 .ssel.pendencias{color:var(--red);border-color:var(--rbd);background-color:var(--rbg)}
 .ssel.atencao{color:var(--amber);border-color:var(--abd);background-color:var(--abg)}
+.ssel.andamento{color:var(--blue);border-color:var(--bbd);background-color:var(--bbg)}
 
 /* EDIT MODE */
 body.edit-mode .card{outline:2px dashed rgba(127,255,110,0.25);outline-offset:2px}
@@ -269,6 +272,7 @@ body.edit-mode .add-card-btn{display:block}
 .status-badge.solicitar{background:var(--abg);color:var(--amber);border:1px solid var(--abd)}
 .status-badge.pendencias{background:var(--rbg);color:var(--red);border:1px solid var(--rbd)}
 .status-badge.atencao{background:var(--abg);color:var(--amber);border:1px solid var(--abd)}
+.status-badge.andamento{background:var(--bbg);color:var(--blue);border:1px solid var(--bbd)}
 /* edit card modal */
 .edit-card-modal .modal{max-width:500px}
 .ecm-row{display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;gap:3px;margin-bottom:.75rem}
@@ -453,6 +457,7 @@ html.light input[type=date]{color-scheme:light}
     <button class="tbtn" id="fb-solicitar" onclick="filt('solicitar')">⚡ Solicitar</button>
     <button class="tbtn" id="fb-pendencias" onclick="filt('pendencias')">✗ Pendências</button>
     <button class="tbtn" id="fb-atencao" onclick="filt('atencao')">⚡ Atenção</button>
+    <button class="tbtn" id="fb-andamento" onclick="filt('andamento')">🔵 Em andamento</button>
     <span style="display:inline-flex;align-items:center;gap:5px;margin-left:6px">
       <input type="checkbox" id="hide-blockers" onchange="toggleBlockers()">
       <label for="hide-blockers" style="font-size:10px;font-family:var(--mono);color:var(--text2);cursor:pointer">Ocultar bloqueantes</label>
@@ -841,13 +846,13 @@ function showSaved(){
 // ── STATS ─────────────────────────────────────────────────────────────────────
 function allItems(){return LAYERS.flatMap(l=>l.phases).flatMap(p=>p.items);}
 function counts(){
-  let ok=0,sol=0,pen=0,att=0,bl=0,total=0;
+  let ok=0,sol=0,pen=0,att=0,and=0,bl=0,total=0;
   allItems().forEach(it=>{
     total++;const s=eff(it.id);
-    if(s==='ok')ok++;else if(s==='solicitar')sol++;else if(s==='pendencias')pen++;else if(s==='atencao')att++;
-    if(it.bl&&s!=='ok')bl++;
+    if(s==='ok')ok++;else if(s==='solicitar')sol++;else if(s==='pendencias')pen++;else if(s==='atencao')att++;else if(s==='andamento')and++;
+    if(it.bl&&s!=='ok'&&s!=='andamento')bl++;
   });
-  return{ok,sol,pen,att,bl,total};
+  return{ok,sol,pen,att,and,bl,total};
 }
 function phaseCounts(){
   const res=[];
@@ -868,6 +873,7 @@ function updateDash(){
     <div class="metric amber"><div class="metric-label">Solicitar</div><div class="metric-val">${c.sol}</div><div class="metric-sub">a acionar</div></div>
     <div class="metric red"><div class="metric-label">Pendências</div><div class="metric-val">${c.pen}</div><div class="metric-sub">a providenciar</div></div>
     <div class="metric amber"><div class="metric-label">Atenção</div><div class="metric-val">${c.att}</div><div class="metric-sub">documentos vencidos</div></div>
+    <div class="metric" style="--mv-col:var(--blue)"><div class="metric-label">Em andamento</div><div class="metric-val" style="color:var(--blue)">${c.and}</div><div class="metric-sub">em progresso</div></div>
     <div class="metric red"><div class="metric-label">Bloqueantes</div><div class="metric-val">${c.bl}</div><div class="metric-sub">ativos</div></div>
     <div class="metric"><div class="metric-label">Dias p/ prazo</div><div class="metric-val" style="font-size:20px;color:var(--red)" id="days-metric">—</div><div class="metric-sub" id="prazo-sub">27/07/2026</div><input type="date" class="finput prazo-edit-field" id="prazo-inp" style="display:none;margin-top:5px;font-size:11px" onchange="setPrazo(this.value)"></div>
   `;
@@ -964,10 +970,10 @@ function buildFlow(){
         // Status badge (view mode) + select (edit mode)
         const right=document.createElement('div');right.style.cssText='-webkit-flex-shrink:0;flex-shrink:0;display:-webkit-flex;display:flex;gap:5px;-webkit-align-items:flex-start;align-items:flex-start';
         const badge=document.createElement('span');badge.className=`status-badge ${s}`;
-        const slabel={'ok':'✓ Ok','solicitar':'⚡ Solicitar','pendencias':'✗ Pendente','atencao':'⚠ Atenção'};
+        const slabel={'ok':'✓ Ok','solicitar':'⚡ Solicitar','pendencias':'✗ Pendente','atencao':'⚠ Atenção','andamento':'🔵 Em andamento'};
         badge.textContent=slabel[s]||s;
         const sel=document.createElement('select');sel.className=`ssel ${s}`;sel.dataset.id=it.id;
-        [['ok','✓ Ok'],['solicitar','⚡ Solicitar'],['pendencias','✗ Pendente'],['atencao','⚠ Atenção']].forEach(([v,l])=>{
+        [['ok','✓ Ok'],['solicitar','⚡ Solicitar'],['pendencias','✗ Pendente'],['atencao','⚠ Atenção'],['andamento','🔵 Em andamento']].forEach(([v,l])=>{
           const o=document.createElement('option');o.value=v;o.textContent=l;if(v===s)o.selected=true;sel.appendChild(o);
         });
         sel.onchange=function(){
@@ -1032,7 +1038,7 @@ function buildFlow(){
 }
 
 function syncFlowCards(){
-  const slabel={'ok':'✓ Ok','solicitar':'⚡ Solicitar','pendencias':'✗ Pendente','atencao':'⚠ Atenção'};
+  const slabel={'ok':'✓ Ok','solicitar':'⚡ Solicitar','pendencias':'✗ Pendente','atencao':'⚠ Atenção','andamento':'🔵 Em andamento'};
   document.querySelectorAll('.card[data-id]').forEach(card=>{
     const id=card.dataset.id;const s=eff(id);
     card.dataset.status=s;card.className=`card ${s}`;
@@ -1117,7 +1123,7 @@ function isOverdue(it){
   const d=S[it.id]?.date;
   if(!d)return false;
   const status=eff(it.id);
-  if(status==='ok')return false;
+  if(status==='ok'||status==='andamento')return false;
   return new Date(d)<new Date();
 }
 function markOverdueCards(){
@@ -1206,9 +1212,9 @@ function openSummary(){
     if(nonOk.length===0){html+=`<div style="font-size:11px;color:var(--green);padding:.3rem 0">✓ Todos concluídos</div>`;}
     else{nonOk.forEach(it=>{
       const s=eff(it.id);
-      const scls=s==='solicitar'?'s-sol':s==='atencao'?'s-att':'s-pen';
-      const slbl=s==='solicitar'?'Solicitar':s==='atencao'?'Atenção':'Pendente';
-      const dot=s==='solicitar'?'var(--amber)':s==='atencao'?'var(--amber)':'var(--red)';
+      const scls=s==='solicitar'?'s-sol':s==='atencao'?'s-att':s==='andamento'?'s-and':'s-pen';
+      const slbl=s==='solicitar'?'Solicitar':s==='atencao'?'Atenção':s==='andamento'?'Em andamento':'Pendente';
+      const dot=s==='solicitar'?'var(--amber)':s==='atencao'?'var(--amber)':s==='andamento'?'var(--blue)':'var(--red)';
       html+=`<div class="sum-row"><div class="sum-dot" style="background:${dot}"></div><div class="sum-item-name">${it.t}${it.bl?' <span style="font-size:8.5px;color:var(--red);font-family:var(--mono)">● BLOQ</span>':''}</div><div class="sum-item-status ${scls}">${slbl}</div></div>`;
     });}
     html+='</div>';
@@ -1261,7 +1267,7 @@ function openNewCardModal(layer,phase){
   document.body.style.overflow='hidden';
 }
 function renderEcmBody(it){
-  const statusOpts=[['ok','✓ Ok'],['solicitar','⚡ Solicitar'],['pendencias','✗ Pendente'],['atencao','⚠ Atenção']];
+  const statusOpts=[['ok','✓ Ok'],['solicitar','⚡ Solicitar'],['pendencias','✗ Pendente'],['atencao','⚠ Atenção'],['andamento','🔵 Em andamento']];
   const layerOpts=LAYERS.map(l=>`<option value="${l.id}" ${_ecmLayer?.id===l.id?'selected':''}>${l.badgeText}</option>`).join('');
   const phaseOpts=_ecmLayer?.phases.map(p=>`<option value="${p.ph}" ${_ecmPhase?.ph===p.ph?'selected':''}>${p.ph}</option>`).join('')||'';
   document.getElementById('ecm-body').innerHTML=`
