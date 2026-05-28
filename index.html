@@ -33,7 +33,7 @@ html.light{
   --blue:#1565c0;--bbg:rgba(21,101,192,0.10);--bbd:rgba(21,101,192,0.30);
   --accent:#2e7d32;
 }
-html{font-size:15.5px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html{font-size:17px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;-webkit-font-smoothing:antialiased}
 
 /* HEADER */
@@ -46,8 +46,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .cd-dot{width:7px;height:7px;border-radius:50%;background:var(--red);-webkit-animation:blink 1.4s infinite;animation:blink 1.4s infinite}
 @-webkit-keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
-.save-indicator{font-family:var(--mono);font-size:10px;color:var(--text3);-webkit-transition:color .3s;transition:color .3s}
-.save-indicator.saved{color:var(--green)}
+.save-indicator{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;color:var(--text3);-webkit-transition:all .3s;transition:all .3s}
+.save-indicator .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);-webkit-transition:background .3s;transition:background .3s}
+.save-indicator.syncing .sync-dot{background:var(--amber);-webkit-animation:spin-dot 1s linear infinite;animation:spin-dot 1s linear infinite}
+.save-indicator.synced .sync-dot{background:var(--green)}
+.save-indicator.synced{color:var(--green)}
+@-webkit-keyframes spin-dot{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
+@keyframes spin-dot{0%{opacity:1}50%{opacity:.3}100%{opacity:1}}
 .hdr-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:5px;cursor:pointer;-webkit-transition:all .15s;transition:all .15s;white-space:nowrap;-webkit-appearance:none;appearance:none}
 .hdr-btn:hover{background:var(--bg4);color:var(--accent);border-color:var(--accent)}
 /* ZOOM CONTROLS */
@@ -138,7 +143,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .ring-wrap{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:1.2rem;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.2rem}
 .ring-svg{-webkit-flex-shrink:0;flex-shrink:0}
 .ring-info{-webkit-flex:1;flex:1}
-.ring-pct{font-family:var(--mono);font-size:32px;font-weight:700;color:var(--accent)}
+.ring-pct{font-family:var(--mono);font-size:42px;font-weight:700;color:var(--accent);line-height:1}
+.ring-label{font-size:12px;color:var(--text2);margin-top:2px;text-align:center}
 .ring-label{font-size:11px;color:var(--text2);margin-top:2px}
 
 /* BAR CHART */
@@ -248,9 +254,11 @@ body.edit-mode .card-edit-actions{display:-webkit-flex;display:flex;-webkit-flex
 .ce-btn:hover{color:var(--text);background:var(--bg5)}
 .ce-btn.del{color:var(--red);border-color:var(--rbd)}
 .ce-btn.del:hover{background:var(--rbg)}
-/* hide status select when NOT in edit mode */
-.card .ssel{display:none}
-body.edit-mode .card .ssel{display:block}
+/* status select always visible (styled as interactive badge) */
+.card .ssel{display:block}
+/* in view mode hide the duplicate badge, show only styled select */
+.card .status-badge{display:none}
+body.edit-mode .card .status-badge{display:none}
 /* new card button per phase */
 .add-card-btn{display:none;margin-top:6px;background:rgba(127,255,110,0.07);border:1px dashed rgba(127,255,110,0.3);color:var(--accent);font-family:var(--mono);font-size:10px;padding:5px 12px;border-radius:7px;cursor:pointer;width:270px;-webkit-appearance:none;appearance:none;-webkit-transition:all .15s;transition:all .15s}
 .add-card-btn:hover{background:rgba(127,255,110,0.14)}
@@ -285,15 +293,21 @@ body.edit-mode .add-card-btn{display:block}
 
 /* darea open by default */
 .darea{display:block;margin-top:.5rem;padding-top:.5rem;border-top:1px solid var(--border)}
+/* fields and predecessor only in edit mode */
+.field-row,.fta,.pred-section{display:none!important}
+body.edit-mode .field-row{display:-webkit-flex!important;display:flex!important}
+body.edit-mode .fta{display:block!important}
+body.edit-mode .pred-section{display:block!important}
 /* DETAIL */
 .dtog{background:none;border:none;color:var(--text3);font-size:9.5px;cursor:pointer;font-family:var(--mono);padding:3px 0;display:block;-webkit-appearance:none;appearance:none}
 .dtog:hover{color:var(--text2)}
 .darea.closed{display:none}
 .darea p{font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:.4rem}
-.darea li{font-size:11px;color:var(--text2);line-height:1.75}
+.darea ul{padding-left:1.3rem;margin-bottom:.4rem;list-style-position:outside}
+.darea li{font-size:11px;color:var(--text2);line-height:1.75;padding-left:.1rem}
 .dwarn{font-size:10px;color:var(--amber);background:var(--abg);border:1px solid var(--abd);border-radius:5px;padding:5px 8px;margin-top:.4rem}
 .derr{font-size:10px;color:var(--red);background:var(--rbg);border:1px solid var(--rbd);border-radius:5px;padding:5px 8px;margin-top:.4rem}
-.field-row{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:5px;margin-top:.45rem}
+.field-row{-webkit-align-items:center;align-items:center;gap:5px;margin-top:.45rem}
 .field-lbl{font-size:8.5px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.05em;-webkit-flex-shrink:0;flex-shrink:0;width:70px}
 .finput{-webkit-flex:1;flex:1;background:var(--bg4);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--font);font-size:10.5px;padding:3px 7px;outline:none;-webkit-transition:border-color .15s;transition:border-color .15s;-webkit-appearance:none;appearance:none}
 .finput:focus{border-color:var(--accent)}
@@ -349,7 +363,7 @@ html.light input[type=date]{color-scheme:light}
       <span class="online-count" id="online-count">1</span>
       <span>online</span>
     </div>
-    <span class="save-indicator" id="save-ind">● salvo</span>
+    <div class="save-indicator synced" id="save-ind"><div class="sync-dot"></div><span id="save-txt">Sincronizado</span></div>
     <div class="zoom-ctrl" title="Ajustar tamanho">
       <button class="zoom-btn" onclick="changeZoom(-1)" aria-label="Diminuir">−</button>
       <span class="zoom-val" id="zoom-val">100%</span>
@@ -358,9 +372,9 @@ html.light input[type=date]{color-scheme:light}
     <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Modo claro/noite">🌙</button>
     <button class="hdr-btn" id="edit-mode-btn" onclick="toggleEditMode()" title="Ativar modo edição">✏️ Editar</button>
     <button class="hdr-btn" onclick="openSummary()" title="Resumo do status atual">📋 Resumo</button>
-    <button class="hdr-btn" onclick="exportBackup()" title="Salvar backup dos dados">💾 Backup</button>
-    <label class="hdr-btn" title="Carregar backup salvo anteriormente" style="cursor:pointer">
-      📂 Restaurar<input type="file" accept=".json" onchange="importBackup(event)" style="display:none">
+    <button class="hdr-btn" onclick="exportBackup()" title="Exportar dados em JSON">📤 Exportar</button>
+    <label class="hdr-btn" title="Importar dados de JSON" style="cursor:pointer">
+      📥 Importar<input type="file" accept=".json" onchange="importBackup(event)" style="display:none">
     </label>
     <div class="cd-chip"><div class="cd-dot"></div><span id="cd">—</span></div>
   </div>
@@ -371,7 +385,6 @@ html.light input[type=date]{color-scheme:light}
   <span>✏️ MODO EDIÇÃO ATIVO</span>
   <button class="em-btn" onclick="openNewCardModal()">＋ Novo card</button>
   <button class="em-btn" onclick="expandAllCards()">↕ Expandir todos</button>
-  <button class="em-btn danger" onclick="if(confirm('Limpar TODO o progresso salvo?'))clearAllData()">🗑 Limpar dados</button>
   <span style="margin-left:auto;opacity:.5">Clique em um card para editar · clique em 🗑 para excluir</span>
 </div>
 
@@ -392,13 +405,13 @@ html.light input[type=date]{color-scheme:light}
   <!-- Ring + Bloqueantes -->
   <div style="display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:8px;margin-bottom:1.2rem">
 
-    <div class="ring-wrap" style="-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:flex-start;align-items:flex-start;gap:.6rem;-webkit-flex:1 1 250px;flex:1 1 250px">
-      <div style="display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:1rem">
-        <svg class="ring-svg" width="72" height="72" viewBox="0 0 72 72">
-          <circle cx="36" cy="36" r="28" fill="none" stroke="var(--bg4)" stroke-width="8"/>
-          <circle id="ring-arc" cx="36" cy="36" r="28" fill="none" stroke="var(--accent)" stroke-width="8"
-            stroke-linecap="round" stroke-dasharray="176" stroke-dashoffset="176"
-            transform="rotate(-90 36 36)" style="transition:stroke-dashoffset .8s"/>
+    <div class="ring-wrap" style="-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;gap:1rem;-webkit-flex:1 1 280px;flex:1 1 280px">
+      <div style="display:-webkit-flex;display:flex;-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:center;align-items:center;gap:.7rem">
+        <svg class="ring-svg" width="180" height="180" viewBox="0 0 180 180">
+          <circle cx="90" cy="90" r="72" fill="none" stroke="var(--bg4)" stroke-width="14"/>
+          <circle id="ring-arc" cx="90" cy="90" r="72" fill="none" stroke="var(--accent)" stroke-width="14"
+            stroke-linecap="round" stroke-dasharray="452" stroke-dashoffset="452"
+            transform="rotate(-90 90 90)" style="transition:stroke-dashoffset .8s"/>
         </svg>
         <div>
           <div class="ring-pct" id="ring-pct">0%</div>
@@ -447,7 +460,6 @@ html.light input[type=date]{color-scheme:light}
     <div style="flex:1"></div>
     <button class="tbtn" onclick="expandAll()">↕ Expandir</button>
     <button class="tbtn" onclick="window.print()">🖨 Imprimir</button>
-    <button class="tbtn primary" onclick="exportCSV()">↓ CSV</button>
   </div>
   <div id="flow-root"></div>
 </div>
@@ -819,9 +831,9 @@ function saveField(id,k,v){
   showSaved();updateDash();
 }
 function showSaved(){
-  const el=document.getElementById('save-ind');
-  el.textContent='✓ salvo';el.className='save-indicator saved';
-  setTimeout(()=>{el.textContent='● salvo';el.className='save-indicator';},2000);
+  const el=document.getElementById('save-ind');const tx=document.getElementById('save-txt');
+  el.className='save-indicator syncing';if(tx)tx.textContent='Salvando…';
+  setTimeout(()=>{el.className='save-indicator synced';if(tx)tx.textContent='Sincronizado';},900);
 }
 // auto-save on every change: selects, inputs, textareas use onchange → saveField
 // → no separate Save button needed; changes are persisted immediately to localStorage
@@ -857,12 +869,12 @@ function updateDash(){
     <div class="metric red"><div class="metric-label">Pendências</div><div class="metric-val">${c.pen}</div><div class="metric-sub">a providenciar</div></div>
     <div class="metric amber"><div class="metric-label">Atenção</div><div class="metric-val">${c.att}</div><div class="metric-sub">documentos vencidos</div></div>
     <div class="metric red"><div class="metric-label">Bloqueantes</div><div class="metric-val">${c.bl}</div><div class="metric-sub">ativos</div></div>
-    <div class="metric"><div class="metric-label">Dias p/ prazo</div><div class="metric-val" style="font-size:20px;color:var(--red)" id="days-metric">—</div><div class="metric-sub">27/07/2026</div></div>
+    <div class="metric"><div class="metric-label">Dias p/ prazo</div><div class="metric-val" style="font-size:20px;color:var(--red)" id="days-metric">—</div><div class="metric-sub" id="prazo-sub">27/07/2026</div><input type="date" class="finput prazo-edit-field" id="prazo-inp" style="display:none;margin-top:5px;font-size:11px" onchange="setPrazo(this.value)"></div>
   `;
   // Ring
   const pct=Math.round(c.ok/c.total*100);
   document.getElementById('ring-pct').textContent=pct+'%';
-  document.getElementById('ring-arc').style.strokeDashoffset=176-(176*pct/100);
+  document.getElementById('ring-arc').style.strokeDashoffset=452-(452*pct/100);
   // Layer progress bars
   const lp=document.getElementById('layer-prog');
   lp.innerHTML=LAYERS.map(l=>{
@@ -911,7 +923,7 @@ function updateDash(){
     </div>`).join('');
 
   // Days metric
-  const d=Math.floor((new Date('2026-07-27')-new Date())/86400000);
+  const d=Math.floor((new Date(getPrazo())-new Date())/86400000);
   const dm=document.getElementById('days-metric');if(dm)dm.textContent=d>0?d:'vencido';
   // Flow cards sync
   syncFlowCards();
@@ -1067,16 +1079,6 @@ function expandAll(){
 }
 function expandAllCards(){expandAll();}
 
-function exportCSV(){
-  const rows=[['ID','Camada','Fase','Item','Status','Bloqueante','Responsável','Data Prevista','Notas']];
-  LAYERS.forEach(l=>l.phases.forEach(p=>p.items.forEach(it=>{
-    rows.push([it.id,l.label,p.ph,it.t,eff(it.id),it.bl?'SIM':'NÃO',S[it.id]?.resp||'',S[it.id]?.date||'',(S[it.id]?.notes||'').replace(/\n/g,' ')]);
-  })));
-  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
-  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
-  a.download='cvco_amira_'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);
-}
-
 // ── THEME ─────────────────────────────────────────────────────────────────────
 function toggleTheme(){
   const isLight=document.documentElement.classList.toggle('light');
@@ -1094,7 +1096,7 @@ function toggleTheme(){
 const ZOOM_LEVELS=[70,80,90,100,110,120,130,150,175,200];
 let zoomIdx=3;// default 100%
 (function initZoom(){
-  try{const z=localStorage.getItem('cvco_zoom');if(z!=null){zoomIdx=parseInt(z)||3;}}catch(e){}
+  // Always start at 100% — don't persist zoom between sessions
   applyZoom();
 })();
 function applyZoom(){
@@ -1181,7 +1183,7 @@ function buildPredSection(it,container){
 // ── SUMMARY MODAL ─────────────────────────────────────────────────────────────
 function openSummary(){
   const c=counts();
-  const d=Math.floor((new Date('2026-07-27')-new Date())/86400000);
+  const d=Math.floor((new Date(getPrazo())-new Date())/86400000);
   let html=`<div class="sum-grid">
     <div class="sum-metric"><div class="metric-val" style="color:var(--green)">${c.ok}</div><div class="metric-label">Concluídos</div></div>
     <div class="sum-metric"><div class="metric-val" style="color:var(--amber)">${c.sol}</div><div class="metric-label">Solicitar</div></div>
@@ -1222,12 +1224,23 @@ function closeSummary(){
 
 // ── EDIT MODE ─────────────────────────────────────────────────────────────────
 let editMode=false;
+const EDIT_PASS='amira';
 function toggleEditMode(){
+  if(!editMode){
+    const pw=prompt('Senha para ativar o modo edição:');
+    if(pw===null)return;// cancelled
+    if(pw.toLowerCase()!==EDIT_PASS){alert('Senha incorreta.');return;}
+  }
   editMode=!editMode;
   document.body.classList.toggle('edit-mode',editMode);
   const btn=document.getElementById('edit-mode-btn');
-  btn.textContent=editMode?'✅ Sair da edição':'✏️ Editar';
+  btn.textContent=editMode?'🔒 Sair da edição':'✏️ Editar';
   btn.classList.toggle('edit-active',editMode);
+  // Show/hide prazo input
+  const pi=document.getElementById('prazo-inp');
+  const ps=document.getElementById('prazo-sub');
+  if(pi){pi.style.display=editMode?'block':'none';pi.value=getPrazo();}
+  if(ps)ps.style.display=editMode?'none':'block';
 }
 
 // ── EDIT CARD MODAL ───────────────────────────────────────────────────────────
@@ -1362,7 +1375,7 @@ function switchTab(t){
 
 // ── COUNTDOWN ────────────────────────────────────────────────────────────────
 function calcCd(){
-  const d=Math.floor((new Date('2026-07-27')-new Date())/86400000);
+  const d=Math.floor((new Date(getPrazo())-new Date())/86400000);
   const m=Math.floor(d/30);
   document.getElementById('cd').textContent=d<0?'PRAZO VENCIDO':d<60?d+' dias p/ vencimento':m+' meses e '+(d%30)+'d';
 }
@@ -1397,10 +1410,15 @@ function importBackup(evt){
   reader.readAsText(file);
 }
 function showMsg(msg,col){
-  const el=document.getElementById('save-ind');
-  el.textContent=msg;el.style.color=col==='green'?'var(--green)':'var(--red)';
-  setTimeout(()=>{el.textContent='● salvo';el.style.color='';el.className='save-indicator';},3500);
+  const el=document.getElementById('save-ind');const tx=document.getElementById('save-txt');
+  el.className='save-indicator '+(col==='green'?'synced':'');
+  if(tx)tx.textContent=msg;
+  setTimeout(()=>{el.className='save-indicator synced';if(tx)tx.textContent='Sincronizado';},3500);
 }
+
+// ── PRAZO EDITÁVEL ────────────────────────────────────────────────────────────
+function getPrazo(){try{return localStorage.getItem('cvco_prazo')||'2026-07-27';}catch(e){return'2026-07-27';}}
+function setPrazo(v){try{localStorage.setItem('cvco_prazo',v);}catch(e){}updateDash();calcCd();showSaved();}
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 buildFlow();
