@@ -1422,7 +1422,8 @@ function closeSummary(){
 
 // ── EDIT MODE ─────────────────────────────────────────────────────────────────
 let editMode=false;
-const EDIT_PASS='amira';
+const EDIT_PASS='mario';
+const ACCESS_PASS='amira';
 function toggleEditMode(){
   if(!editMode){
     // Abrir modal de senha customizado (prompt() é bloqueado no Safari local)
@@ -1784,14 +1785,13 @@ function confirmarAcesso(){
   var input=document.getElementById('acesso-input');
   var erro=document.getElementById('acesso-erro');
   var pw=(input?input.value:'').toLowerCase().trim();
-  if(pw!==EDIT_PASS){
+  if(pw!==ACCESS_PASS){
     erro.textContent='Senha incorreta. Tente novamente.';
     if(input){input.value='';input.focus();}
     return;
   }
   var modal=document.getElementById('acesso-modal');
   modal.classList.remove('open');
-  // Remove from DOM after transition
   setTimeout(function(){if(modal&&modal.parentNode)modal.parentNode.removeChild(modal);},400);
 }
 
