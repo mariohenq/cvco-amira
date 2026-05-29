@@ -179,7 +179,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:1
 .b-status.ok{background:var(--gbg);color:var(--green)}
 .b-status.pen{background:var(--rbg);color:var(--red)}
 
-/* TIMELINE */
+.tl-alert-group{margin-bottom:1rem}
+.tl-alert-group:last-child{margin-bottom:0}
+.tl-group-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:.6rem;background:var(--bg4);color:var(--text3)}
+.tl-group-label.overdue{background:var(--rbg);color:var(--red);border:1px solid var(--rbd)}
+.tl-group-label.soon{background:var(--abg);color:var(--amber);border:1px solid var(--abd)}
 .timeline{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.2rem}
 .tl-title{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:.8rem}
 .tl-row{display:-webkit-flex;display:flex;-webkit-align-items:flex-start;align-items:flex-start;gap:10px;margin-bottom:.6rem}
@@ -469,9 +473,9 @@ html.light input[type=date]{color-scheme:light}
     <div id="bar-chart"></div>
   </div>
 
-  <!-- Timeline de atenção -->
+  <!-- Timeline de datas / alertas -->
   <div class="timeline">
-    <div class="tl-title">Documentos com atenção especial</div>
+    <div class="tl-title">⚠ Alertas de Prazo — Vencidos e Próximos</div>
     <div id="tl-list"></div>
   </div>
 
@@ -850,26 +854,33 @@ const LAYERS = [
 
 // ── STORAGE ──────────────────────────────────────────────────────────────────
 const KEY='cvco_v4';
-// Seed backup data if localStorage is empty
+// Merge seed data: always ensure backup dates/resp are present (won't overwrite user changes)
 (function seedData(){
   try{
-    const existing=localStorage.getItem(KEY);
-    if(!existing||existing==='{}'||!existing.trim()){
-      const seed={"xaxins":{"status":"ok"},"san_esg":{"resp":"Josafá","date":"2026-06-04"},"alvara":{"status":"atencao","resp":"Evandro","date":"2026-05-22"},"card_1779998101286":{"resp":"NEXEA","date":"2026-06-18"}};
-      localStorage.setItem(KEY,JSON.stringify(seed));
-    }
+    const seed={"xaxins":{"status":"ok"},"san_esg":{"resp":"Josafá","date":"2026-06-04"},"alvara":{"status":"atencao","resp":"Evandro","date":"2026-05-22"},"card_1779998101286":{"resp":"NEXEA","date":"2026-06-18"}};
+    let existing={};
+    try{existing=JSON.parse(localStorage.getItem(KEY)||'{}');}catch(e){}
+    // Merge: for each seed key, copy fields that are missing in existing
+    Object.keys(seed).forEach(function(id){
+      if(!existing[id])existing[id]={};
+      Object.keys(seed[id]).forEach(function(k){
+        if(existing[id][k]===undefined||existing[id][k]==='')existing[id][k]=seed[id][k];
+      });
+    });
+    localStorage.setItem(KEY,JSON.stringify(existing));
   }catch(e){}
 })();
 let S={};
-try{S=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+try{S=JSON.parse(localStorage.getItem(KEY)||'{}');}catch(e){}
 
 function eff(id){
-  const def=LAYERS.flatMap(l=>l.phases).flatMap(p=>p.items).find(it=>it.id===id)?.def||'pendencias';
-  return S[id]?.status||def;
+  var item=LAYERS.flatMap(function(l){return l.phases;}).flatMap(function(p){return p.items;}).find(function(it){return it.id===id;});
+  var def=item?item.def||'pendencias':'pendencias';
+  return(S[id]&&S[id].status)?S[id].status:def;
 }
 function saveField(id,k,v){
   if(!S[id])S[id]={};S[id][k]=v;
-  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
   showSaved();updateDash();
 }
 function showSaved(){
@@ -951,19 +962,74 @@ function updateDash(){
     </div>`;
   }).join('');
 
-  // Timeline (attn + blockers)
-  const attn=[
-    {col:'var(--amber)',label:'AEO vencida em 11/07/2025',sub:'Verificar necessidade de renovação para CVC/SMMA'},
-    {col:'var(--amber)',label:'ARP vencida em 15/05/2024',sub:'Confirmar transplante executado dentro da validade'},
-    {col:'var(--red)',label:'Prazo do Alvará: 27/07/2026',sub:'Conclusão da obra deve ocorrer antes desta data'},
-    {col:'var(--blue)',label:'Ligações Sanepar: prazo out/2026',sub:'Solicitar antes de outubro/2026'},
-    {col:'var(--amber)',label:'Estudo de reforço Copel',sub:'Solicitar com 6 meses de antecedência à ligação'},
-  ];
-  document.getElementById('tl-list').innerHTML=attn.map((a,i)=>`
-    <div class="tl-row">
-      <div class="tl-dot-col"><div class="tl-dot" style="background:${a.col}"></div>${i<attn.length-1?'<div class="tl-line"></div>':''}</div>
-      <div class="tl-content"><div class="tl-label">${a.label}</div><div class="tl-sub">${a.sub}</div></div>
-    </div>`).join('');
+  // ── Timeline dinâmica: vencidos + próximos 7 dias baseados nas datas dos cards
+  const today=new Date();today.setHours(0,0,0,0);
+  const next7=new Date(today);next7.setDate(today.getDate()+7);
+  const fmtD=iso=>{const p=iso.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
+
+  // Coletar todos os itens com data preenchida e status != ok
+  const itemsComData=allItems()
+    .filter(function(it){return S[it.id]&&S[it.id].date&&eff(it.id)!=='ok';})
+    .map(function(it){
+      const d=new Date(S[it.id].date+'T00:00:00');
+      const diff=Math.floor((d-today)/86400000);
+      return{it:it,d:d,diff:diff,date:S[it.id].date,resp:(S[it.id]&&S[it.id].resp)||''};
+    })
+    .sort(function(a,b){return a.d-b.d;});
+
+  const vencidos=itemsComData.filter(x=>x.diff<0);
+  const proximos=itemsComData.filter(x=>x.diff>=0&&x.diff<=7);
+  const futuros=itemsComData.filter(x=>x.diff>7&&x.diff<=30);
+
+  let tlHtml='';
+
+  if(vencidos.length>0){
+    tlHtml+=`<div class="tl-alert-group">
+      <div class="tl-group-label overdue">⏰ Prazos Vencidos (${vencidos.length})</div>
+      ${vencidos.map(x=>`
+        <div class="tl-row">
+          <div class="tl-dot-col"><div class="tl-dot" style="background:var(--red)"></div><div class="tl-line"></div></div>
+          <div class="tl-content">
+            <div class="tl-label">${x.it.t}</div>
+            <div class="tl-sub">📅 ${fmtD(x.date)} · <span style="color:var(--red);font-weight:600">${Math.abs(x.diff)} dia(s) em atraso</span>${x.resp?' · 👤 '+x.resp:''}</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  if(proximos.length>0){
+    tlHtml+=`<div class="tl-alert-group">
+      <div class="tl-group-label soon">📅 Próximos 7 Dias (${proximos.length})</div>
+      ${proximos.map(x=>`
+        <div class="tl-row">
+          <div class="tl-dot-col"><div class="tl-dot" style="background:var(--amber)"></div><div class="tl-line"></div></div>
+          <div class="tl-content">
+            <div class="tl-label">${x.it.t}</div>
+            <div class="tl-sub">📅 ${fmtD(x.date)} · <span style="color:var(--amber);font-weight:600">${x.diff===0?'hoje':x.diff===1?'amanhã':'em '+x.diff+' dias'}</span>${x.resp?' · 👤 '+x.resp:''}</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  if(futuros.length>0){
+    tlHtml+=`<div class="tl-alert-group">
+      <div class="tl-group-label">📆 Próximos 30 Dias (${futuros.length})</div>
+      ${futuros.map(x=>`
+        <div class="tl-row">
+          <div class="tl-dot-col"><div class="tl-dot" style="background:var(--blue)"></div><div class="tl-line"></div></div>
+          <div class="tl-content">
+            <div class="tl-label">${x.it.t}</div>
+            <div class="tl-sub">📅 ${fmtD(x.date)} · em ${x.diff} dias${x.resp?' · 👤 '+x.resp:''}</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  if(tlHtml===''){
+    tlHtml='<div style="font-size:12px;color:var(--text3);padding:.4rem 0">Nenhum item com data cadastrada e prazo pendente.</div>';
+  }
+
+  document.getElementById('tl-list').innerHTML=tlHtml;
 
   // Days metric
   const d=Math.floor((new Date(getPrazo())-new Date())/86400000);
@@ -1005,7 +1071,7 @@ function buildFlow(){
         left.innerHTML=`<div class="card-title">${it.t}</div><div class="card-sub">${it.s}</div>${tags}`;
         // Meta row: date + resp badges below title
         const metaRow=document.createElement('div');metaRow.className='card-meta-row';metaRow.dataset.metaId=it.id;
-        const savedDate=S[it.id]?.date;
+        const savedDate=S[it.id]&&S[it.id].date?S[it.id].date:null;
         if(savedDate){
           const dObj=new Date(savedDate+'T00:00:00');
           const today=new Date();today.setHours(0,0,0,0);
@@ -1018,7 +1084,7 @@ function buildFlow(){
           dbadge.textContent=icon+' '+dFmt+(diff<0?' · vencido':diff===0?' · hoje':diff===1?' · amanhã':diff<=7?' · '+diff+'d':'');
           metaRow.appendChild(dbadge);
         }
-        const savedResp=S[it.id]?.resp;
+        const savedResp=S[it.id]&&S[it.id].resp?S[it.id].resp:null;
         if(savedResp){
           const rbadge=document.createElement('span');
           rbadge.className='card-resp-badge';rbadge.dataset.respBadge=it.id;
@@ -1056,13 +1122,13 @@ function buildFlow(){
           // Fields
           const rr=document.createElement('div');rr.className='field-row';
           rr.innerHTML='<span class="field-lbl">Responsável</span>';
-          const ri=document.createElement('input');ri.className='finput';ri.placeholder='nome ou empresa';ri.value=S[it.id]?.resp||'';
+          const ri=document.createElement('input');ri.className='finput';ri.placeholder='nome ou empresa';ri.value=(S[it.id]&&S[it.id].resp)||'';
           ri.onchange=()=>{saveField(it.id,'resp',ri.value);updateMetaBadges(it.id);};rr.appendChild(ri);da.appendChild(rr);
           const dr=document.createElement('div');dr.className='field-row';
           dr.innerHTML='<span class="field-lbl">Data prevista</span>';
-          const di=document.createElement('input');di.type='date';di.className='finput';di.value=S[it.id]?.date||'';
+          const di=document.createElement('input');di.type='date';di.className='finput';di.value=(S[it.id]&&S[it.id].date)||'';
           di.onchange=()=>{saveField(it.id,'date',di.value);updateMetaBadges(it.id);};dr.appendChild(di);da.appendChild(dr);
-          const na=document.createElement('textarea');na.className='fta';na.placeholder='Observações, contatos, processos, datas…';na.value=S[it.id]?.notes||'';
+          const na=document.createElement('textarea');na.className='fta';na.placeholder='Observações, contatos, processos, datas…';na.value=(S[it.id]&&S[it.id].notes)||'';
           na.onchange=()=>saveField(it.id,'notes',na.value);da.appendChild(na);
           tog.onclick=()=>{const closed=da.classList.toggle('closed');tog.textContent=closed?'▸ detalhes':'▾ ocultar';};
           card.appendChild(tog);card.appendChild(da);
@@ -1180,7 +1246,7 @@ function changeZoom(dir){
 
 // ── OVERDUE CHECK ─────────────────────────────────────────────────────────────
 function isOverdue(it){
-  const d=S[it.id]?.date;
+  const d=S[it.id]&&S[it.id].date?S[it.id].date:null;
   if(!d)return false;
   const status=eff(it.id);
   if(status==='ok'||status==='andamento')return false;
