@@ -509,6 +509,7 @@ select, input, textarea { font-family: inherit; font-size: 14px; }
 .th-filter-btn svg { width: 10px; height: 10px; fill: currentColor; }
 .th-filter-btn:hover { opacity: 1; background: rgba(44,95,124,.12); }
 .th-filter-btn.is-ativo { opacity: 1; color: var(--vermelho); }
+#btn-toggle-fora-catalogo.is-ativo { background: #fdecea; border-color: var(--vermelho); color: var(--vermelho); }
 
 .col-filter-panel {
   position: fixed;
@@ -722,6 +723,18 @@ select, input, textarea { font-family: inherit; font-size: 14px; }
 .modal__head h2 { font-size: 19px; }
 .modal__close { border: none; background: transparent; font-size: 16px; color: var(--ink-mute); }
 .modal__close:hover { color: var(--ink); }
+.modal--largo { width: min(760px, 100%); }
+.modal__corpo-livre { padding: 18px 22px 24px; }
+
+.relatorio-catalogo__item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px;
+}
+.relatorio-catalogo__info { display: flex; flex-direction: column; gap: 2px; }
+.relatorio-catalogo__campo { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-mute); }
+.relatorio-catalogo__valor { font-weight: 600; }
+.relatorio-catalogo__count { font-size: 12.5px; color: var(--ink-mute); }
+.relatorio-catalogo__vazio { text-align: center; padding: 30px 10px; color: var(--ink-mute); }
 
 .modal__form { padding: 18px 22px 22px; display: flex; flex-direction: column; gap: 14px; }
 
@@ -1160,6 +1173,7 @@ select, input, textarea { font-family: inherit; font-size: 14px; }
     <div class="toolbar">
       <input type="search" id="busca-livre" placeholder="Buscar por código, unidade, descrição, responsável…">
       <button class="btn btn--ghost" id="ft-limpar">Limpar filtros</button>
+      <button class="btn btn--ghost" id="btn-toggle-fora-catalogo" title="Mostra só pendências com Ambiente, Disciplina, Responsável ou Unidade fora do catálogo atual">⚠️ Só fora do catálogo</button>
       <button class="btn btn--ghost" id="btn-baixar-pdf">⬇ Baixar PDF</button>
       <label class="btn btn--ghost" for="input-importar-docx" style="cursor:pointer;" title="Importa pendências a partir de um relatório .docx com tabelas de Pendência/Antes/Depois">⬆ Importar relatório (.docx)</label>
       <input type="file" id="input-importar-docx" accept=".docx" hidden>
@@ -1274,6 +1288,7 @@ select, input, textarea { font-family: inherit; font-size: 14px; }
         <h2>Catálogos (ambientes, disciplinas, responsáveis)</h2>
         <p>Adicione ou remova itens usados nos filtros e no formulário de cadastro de pendências — útil para adaptar o painel a outros tipos de empreendimento.</p>
       </div>
+      <button type="button" class="btn btn--ghost" id="btn-relatorio-catalogo" style="margin-bottom:14px;">🔍 Verificar itens fora do catálogo</button>
       <div class="catalogo-grid">
         <div class="catalogo-bloco">
           <h3>Ambientes</h3>
@@ -1453,6 +1468,24 @@ select, input, textarea { font-family: inherit; font-size: 14px; }
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-catalogo-overlay" hidden>
+  <div class="modal modal--largo" role="dialog" aria-modal="true">
+    <div class="modal__head">
+      <h2>Itens fora do catálogo atual</h2>
+      <button class="modal__close" id="modal-catalogo-fechar" aria-label="Fechar">✕</button>
+    </div>
+    <div class="modal__corpo-livre">
+      <p class="text-muted" style="margin-top:0;">
+        Valores de Ambiente, Disciplina, Responsável ou Unidade usados em pendências existentes, mas que
+        não estão mais na lista atual do catálogo (geralmente porque foram removidos em Unidades e Ranking
+        → Catálogos depois de já terem sido usados). "Restaurar" adiciona o item de volta ao catálogo, sem
+        alterar nenhuma pendência.
+      </p>
+      <div id="relatorio-catalogo-corpo"></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast" hidden></div>
 
 <!-- ======================= CHAT GUIADO — CADASTRO RÁPIDO ======================= -->
@@ -1536,6 +1569,7 @@ const CORES = {
 const state = {
   pendencias: [], unidades: [], charts: {}, editandoCodigo: null, selecionadas: new Set(),
   filtrosColuna: {}, config: null, ambientes: [], disciplinas: [], responsaveis: [],
+  mostrarSoForaCatalogo: false,
 };
 
 /* ------------------------------------------------------- RNG determinístico */
@@ -1947,6 +1981,7 @@ function aplicarFiltrosTabela(lista) {
       const selecionados = state.filtrosColuna[campo];
       if (selecionados && !selecionados.has(p[campo])) return false;
     }
+    if (state.mostrarSoForaCatalogo && !pendenciaTemValorForaCatalogo(p)) return false;
     if (busca) {
       const alvo = `${p.Codigo} ${p.Unidade} ${p.Descricao} ${p.Responsavel} ${p.Ambiente} ${p.Disciplina}`.toLowerCase();
       if (!alvo.includes(busca)) return false;
@@ -2218,6 +2253,96 @@ function badgeAlerta(a) {
 }
 function formatarData(iso) { if (!iso) return "—"; const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
 function pendenciaIncompleta(p) { return !p.Criticidade || !p.Responsavel || !p.Ambiente || !p.Disciplina; }
+
+/* ------------------------------------------- itens fora do catálogo atual */
+const CAMPO_PARA_CATALOGO = { Ambiente: "ambientes", Disciplina: "disciplinas", Responsavel: "responsaveis" };
+
+function camposForaDoCatalogo(p) {
+  const problemas = [];
+  ["Ambiente", "Disciplina", "Responsavel"].forEach((campo) => {
+    const valor = p[campo];
+    if (!valor) return;
+    if (!state[CAMPO_PARA_CATALOGO[campo]].includes(valor)) problemas.push(campo);
+  });
+  if (p.Unidade && !state.unidades.some((u) => u.unidade === p.Unidade)) problemas.push("Unidade");
+  return problemas;
+}
+
+function pendenciaTemValorForaCatalogo(p) { return camposForaDoCatalogo(p).length > 0; }
+
+function gerarRelatorioForaCatalogo() {
+  const grupos = {};
+  state.pendencias.forEach((p) => {
+    ["Ambiente", "Disciplina", "Responsavel"].forEach((campo) => {
+      const valor = p[campo];
+      if (!valor || state[CAMPO_PARA_CATALOGO[campo]].includes(valor)) return;
+      const chave = campo + "::" + valor;
+      if (!grupos[chave]) grupos[chave] = { campo, valor, count: 0, campoCatalogo: CAMPO_PARA_CATALOGO[campo] };
+      grupos[chave].count++;
+    });
+    if (p.Unidade && !state.unidades.some((u) => u.unidade === p.Unidade)) {
+      const chave = "Unidade::" + p.Unidade;
+      if (!grupos[chave]) grupos[chave] = { campo: "Unidade", valor: p.Unidade, count: 0, campoCatalogo: null };
+      grupos[chave].count++;
+    }
+  });
+  return Object.values(grupos).sort((a, b) => b.count - a.count);
+}
+
+function restaurarValorNoCatalogo(campo, valor, campoCatalogo) {
+  if (campoCatalogo) {
+    if (!state[campoCatalogo].includes(valor)) {
+      state[campoCatalogo] = [...state[campoCatalogo], valor];
+      salvarConfigFirestore().catch(erroFirestore);
+    }
+    toast(`"${valor}" foi adicionado de volta ao catálogo de ${campo.toLowerCase()}.`);
+  } else {
+    if (!state.unidades.some((u) => u.unidade === valor)) {
+      state.unidades = [...state.unidades, { unidade: valor, pavimento: "—", posicao: "", ranking: String(state.unidades.length + 1) }];
+      salvarUnidadesFirestore().catch(erroFirestore);
+    }
+    toast(`Unidade "${valor}" foi adicionada de volta à lista de unidades.`);
+  }
+  setTimeout(renderRelatorioForaCatalogo, 300);
+}
+
+function abrirRelatorioCatalogo() {
+  document.getElementById("modal-catalogo-overlay").hidden = false;
+  renderRelatorioForaCatalogo();
+}
+function fecharRelatorioCatalogo() {
+  document.getElementById("modal-catalogo-overlay").hidden = true;
+}
+
+function renderRelatorioForaCatalogo() {
+  const corpo = document.getElementById("relatorio-catalogo-corpo");
+  const grupos = gerarRelatorioForaCatalogo();
+
+  if (grupos.length === 0) {
+    corpo.innerHTML = `<div class="relatorio-catalogo__vazio">✅ Nenhum item fora do catálogo atual. Tudo certo.</div>`;
+    return;
+  }
+
+  corpo.innerHTML = grupos.map((g) => `
+    <div class="relatorio-catalogo__item">
+      <div class="relatorio-catalogo__info">
+        <span class="relatorio-catalogo__campo">${g.campo}</span>
+        <span class="relatorio-catalogo__valor">${g.valor}</span>
+        <span class="relatorio-catalogo__count">${g.count} pendência(s) usando este valor</span>
+      </div>
+      <button type="button" class="btn btn--ghost btn-restaurar-catalogo"
+        data-campo="${g.campo}" data-valor="${g.valor}" data-campo-catalogo="${g.campoCatalogo || ""}">
+        Restaurar no catálogo
+      </button>
+    </div>
+  `).join("");
+
+  corpo.querySelectorAll(".btn-restaurar-catalogo").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      restaurarValorNoCatalogo(btn.dataset.campo, btn.dataset.valor, btn.dataset.campoCatalogo || null);
+    });
+  });
+}
 
 function selectStatusInline(codigo, statusAtual) {
   const opcoes = STATUS_LIST.map((s) => `<option value="${s}" ${s === statusAtual ? "selected" : ""}>${s}</option>`).join("");
@@ -3524,6 +3649,13 @@ function handleUploadFoto(qual, inputEl) {
 }
 
 function garantirValorNoSelect(selectEl, valor) {
+  // Remove qualquer opção temporária deixada por uma pendência aberta
+  // anteriormente na mesma sessão — sem isso, cada pendência "fora do
+  // catálogo" ficava acumulando no select para sempre, contaminando a
+  // lista de todas as pendências abertas depois dela.
+  const antigo = selectEl.querySelector('option[data-temporario="1"]');
+  if (antigo) antigo.remove();
+
   if (valor === undefined || valor === null || valor === "") return;
   selectEl.value = valor;
   if (selectEl.value !== String(valor)) {
@@ -3536,6 +3668,7 @@ function garantirValorNoSelect(selectEl, valor) {
     const opt = document.createElement("option");
     opt.value = valor;
     opt.textContent = `${valor} (fora do catálogo atual)`;
+    opt.dataset.temporario = "1";
     selectEl.insertBefore(opt, selectEl.firstChild);
     selectEl.value = valor;
   }
@@ -3685,11 +3818,21 @@ function bindEvents() {
 
   document.getElementById("busca-livre").addEventListener("input", debounce(renderTudo, 200));
   document.getElementById("ft-limpar").addEventListener("click", limparTodosFiltros);
+  document.getElementById("btn-toggle-fora-catalogo").addEventListener("click", () => {
+    state.mostrarSoForaCatalogo = !state.mostrarSoForaCatalogo;
+    document.getElementById("btn-toggle-fora-catalogo").classList.toggle("is-ativo", state.mostrarSoForaCatalogo);
+    renderTudo();
+  });
   document.getElementById("btn-baixar-pdf").addEventListener("click", baixarPDFPendencias);
   document.getElementById("input-importar-docx").addEventListener("change", (e) => {
     const arquivo = e.target.files[0];
     if (!arquivo) return;
     importarDocxPendencias(arquivo).finally(() => { e.target.value = ""; });
+  });
+  document.getElementById("btn-relatorio-catalogo").addEventListener("click", abrirRelatorioCatalogo);
+  document.getElementById("modal-catalogo-fechar").addEventListener("click", fecharRelatorioCatalogo);
+  document.getElementById("modal-catalogo-overlay").addEventListener("click", (e) => {
+    if (e.target.id === "modal-catalogo-overlay") fecharRelatorioCatalogo();
   });
 
   Object.entries(SELECT_FILTRO_POR_CAMPO).forEach(([campo, selectId]) => {
