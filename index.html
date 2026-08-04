@@ -901,9 +901,8 @@ _REF_DL.on('value',snap=>{
     <div class="mfield"><label>Camada / classificação</label>
       <select id="ed-layer">
         <option value="">— sem alteração —</option>
-        <option value="doc">Camada 1 — Condicionante obrigatória do Alvará</option>
-        <option value="op">Camada 2 — Antecessora operacional</option>
-        <option value="par">Camada 3 — Entrega técnica paralela</option>
+        <option value="doc">Camada 1 — Bloqueante do Alvará/CVCO</option>
+        <option value="op">Camada 2 — Pendência / antecessora</option>
       </select>
     </div>
     <div class="mfield"><label>Bloqueante para o CVCO?</label>
@@ -953,9 +952,8 @@ _REF_DL.on('value',snap=>{
         <div class="create-mfield">
           <label>Camada</label>
           <select id="nc-layer">
-            <option value="doc">Camada 1 — Condicionante do Alvará</option>
-            <option value="op" selected>Camada 2 — Operacional</option>
-            <option value="par">Camada 3 — Entrega técnica</option>
+            <option value="doc">Camada 1 — Bloqueante</option>
+            <option value="op" selected>Camada 2 — Pendência</option>
           </select>
         </div>
         <div class="create-mfield">
@@ -1081,9 +1079,90 @@ _REF_DL.on('value',snap=>{
 
 const LAYERS = [
   {
-    id:'doc', label:'CONDICIONANTES OBRIGATÓRIAS DO ALVARÁ — SMU · SMMA · Bombeiros · Sanepar · ISS',
-    badge:'doc', badgeText:'Camada 1 — Condicionantes obrigatórias do Alvará',
-    desc:'Exigências expressas do Alvará 395161 e legislação municipal. Sem estes itens o CVCO não é emitido.',
+    id:'doc', label:'BLOQUEANTES DO ALVARÁ / CVCO — SMU · SMMA · Bombeiros · Sanepar · ISS',
+    badge:'doc', badgeText:'Camada 1 — Itens bloqueantes do Alvará/CVCO',
+    desc:'Os 9 itens que travam a emissão do Alvará/CVCO conforme condicionantes expressas e histórico do processo. Sem estes, o CVCO não é emitido.',
+    phases:[
+      {ph:'LICENÇAS SMMA — Ambiental',col:'#4caf50',items:[
+        {id:'xaxins',t:'Transplante dos Xaxins — relatório fotográfico',
+         s:'08 Xaxins total (AEO+ARP) · Condicionante CVCO',
+         def:'pendencias',bl:true,attn:false,
+         dt:'Relatório fotográfico comprovando transplante dos Xaxins para novo local dentro do imóvel, antes do início das obras. Exigência expressa para emissão do CVC/SMMA.',
+         li:['05 Xaxins da AEO-23000671','03 Xaxins da ARP-23002086','Relatório fotográfico elaborado por responsável técnico'],
+         warn:null,err:'BLOQUEANTE: sem relatório fotográfico aprovado pela SMMA o CVC não é emitido e consequentemente o CVCO é bloqueado.'},
+        {id:'arvores',t:'Manutenção das árvores isoladas remanescentes',
+         s:'Condicionante do CVC/SMMA',
+         def:'pendencias',bl:true,attn:false,
+         dt:'A AEO condiciona o CVC à manutenção das árvores isoladas conforme parecer técnico. Necessário relatório fotográfico e conferência das árvores preservadas.',
+         li:['33 árvores dentro do imóvel (nativas e exóticas) a serem preservadas','13 em bem público (verificar preservação)','Relatório fotográfico das árvores mantidas'],
+         warn:null,err:'BLOQUEANTE para o CVC/SMMA.'},
+        {id:'comp',t:'Compensação Florestal — 100 mudas nativas',
+         s:'Art. 19 e 21 Lei 9806/2000 · Condicionante CVCO',
+         def:'pendencias',bl:true,attn:false,
+         dt:'100 mudas nativas da região de Curitiba: 20 pelo corte de árvores + 80 pela área construída. Plantio na área permeável (686,73 m²) ou doação ao Horto da Barreirinha.',
+         li:['Mudas plantio: altura mínima 1,5m, identificadas e tutoradas','Doação: mín. 1,80m — Horto Barreirinha (3585-3171)','A soma plantio + doação deve = 100 mudas','Relatório fotográfico e comprovantes'],
+         warn:null,err:'BLOQUEANTE para o CVC/SMMA e consequentemente para o CVCO.'},
+      ]},
+      {ph:'RESÍDUOS DA CONSTRUÇÃO (SMMA)',col:'#2e7d32',items:[
+        {id:'rgrcc',t:'RGRCC — Relatório Final de Resíduos (SMMA)',
+         s:'A apresentar ao fim da obra · Condicionante CVCO',
+         def:'pendencias',bl:true,attn:false,
+         dt:'Relatório de execução do PGRCC. Submetido ao final da obra para deferimento pela SMMA. Antecessor: MTRs e CDFs consolidados.',
+         li:['Compilação de todos os MTRs e CDFs','Portaria 280/2020 do Ministério do Meio Ambiente','Submeter via sistema SMMA para deferimento'],
+         warn:null,err:'BLOQUEANTE — condicionante explícita do Alvará 395161.'},
+        {id:'cvc',t:'CVC — Certificado de Vistoria de Conclusão (SMMA)',
+         s:'A solicitar após conclusão · Condicionante CVCO',
+         def:'pendencias',bl:true,attn:false,
+         dt:'Emitido pela SMMA após vistoria in loco e comprovação de todas as condicionantes ambientais. Antecessores: RGRCC deferido + compensação florestal + transplantes documentados.',
+         li:['RGRCC deferido','100 mudas comprovadas','Relatório fotográfico dos transplantes de Xaxins','Manutenção das árvores isoladas confirmada','Vistoria física pela SMMA/MALF'],
+         warn:null,err:'BLOQUEANTE — Alvará exige "CVC emitido e deferido pela SMMA" para o CVCO.'},
+      ]},
+      {ph:'CORPO DE BOMBEIROS',col:'#e24b4a',items:[
+        {id:'cb_cert',t:'AVCB — Auto de Vistoria Corpo de Bombeiros',
+         s:'Certificado do Corpo de Bombeiros · Condicionante CVCO',
+         def:'pendencias',bl:true,attn:false,
+         dt:'AVCB emitido após aprovação na vistoria do CBPR. Obrigatório para edificações com área >750 m². Apresentar na documentação do CVCO.',
+         li:[],warn:null,err:'BLOQUEANTE — condicionante explícita do Alvará 395161.'},
+      ]},
+      {ph:'SANEPAR',col:'#5b9cf6',items:[
+        {id:'san_laudo',t:'Laudo Sanepar — destinação correta do esgoto',
+         s:'Após ligação efetivada · Condicionante CVCO',
+         def:'pendencias',bl:true,attn:false,
+         dt:'Após ligação efetivada, solicitar laudo à Sanepar confirmando que o esgoto está sendo destinado corretamente à rede pública coletora.',
+         li:[],warn:null,err:'BLOQUEANTE — condicionante explícita do Alvará 395161.'},
+      ]},
+      {ph:'REGULARIDADE FISCAL',col:'#639922',items:[
+        {id:'iss',t:'Regularidade ISS — mão de obra / Certidão fiscal',
+         s:'Leis Compl. 40/01 e 80/11 · Certidão SMF Curitiba',
+         def:'pendencias',bl:true,attn:false,
+         dt:'Demonstrar regularidade quanto ao ISS sobre a mão de obra de execução perante a Secretaria Municipal de Finanças.',
+         li:['Certidão negativa de débitos municipais SMF','Verificar retenção ISS de empresas de fora de Curitiba'],
+         warn:null,err:'BLOQUEANTE — condicionante explícita do Alvará 395161.'},
+      ]},
+      {ph:'CONDICIONANTES SMU',col:'#534ab7',items:[
+        {id:'cotas',t:'Quitação de cotas — Certidão 1064',
+         s:'Processo 00-019501/2023 · Trâmite interno SMU',
+         def:'pendencias',bl:true,attn:false,
+         dt:'Comprovar quitação das cotas de Potencial Construtivo da certidão nº 1064 junto à SMU, em trâmite interno.',
+         li:[],warn:null,err:'BLOQUEANTE — condicionante explícita do Alvará 395161.'},
+        {id:'agua_rac',t:'Comprovação dos dispositivos de uso racional de água',
+         s:'Decreto Municipal 1007/2020 · Condicionante CVCO',
+         def:'pendencias',bl:true,attn:false,
+         dt:'Instalar e documentar os dispositivos de uso e conservação racional de água conforme Decreto 1007/2020.',
+         li:['Hidrômetros individualizados por unidade','Dispositivos economizadores em torneiras e duchas','Sistema de captação/reaproveitamento de água pluvial (verificar se aplicável ao projeto)','Fotos e laudo de comprovação para vistoria'],
+         warn:null,err:'BLOQUEANTE — condicionante explícita do Alvará 395161.'},
+        {id:'taxas',t:'Quitação das taxas de vistoria do CVCO',
+         s:'Guia de recolhimento a calcular (12.156,45 m²) · SMU',
+         def:'pendencias',bl:true,attn:false,
+         dt:'Solicitar guia junto à SMU (DECE), calcular sobre a área total e efetuar pagamento antes do protocolo.',
+         li:[],warn:null,err:'BLOQUEANTE — condicionante explícita do Alvará 395161.'},
+      ]},
+    ]
+  },
+  {
+    id:'op', label:'PENDÊNCIAS E ANTECESSORAS — Alvará · SMMA · Bombeiros · Sanepar · SMU · Copel · Elevadores · Gás',
+    badge:'op', badgeText:'Camada 2 — Pendências e antecessoras (não bloqueantes)',
+    desc:'Itens que não bloqueiam diretamente o CVCO hoje, mas são antecessores necessários dos bloqueantes da Camada 1 ou exigências operacionais para entrega e funcionamento do edifício.',
     phases:[
       {ph:'PRÉ-REQUISITO BASE',col:'#7ecb6e',items:[
         {id:'alvara',t:'Alvará de construção nº 395161',
@@ -1112,24 +1191,6 @@ const LAYERS = [
          dt:'Autorizou transplante de 03 Xaxins (Dicksonia sellowiana). Obtida em 17/11/2023. Venceu em 15/05/2024 (180 dias). Documento obtido, mas verificar se o transplante foi executado dentro da validade.',
          li:['03 Xaxins da ARP','Confirmar data de execução do transplante','Confirmar relatório fotográfico realizado'],
          warn:'ARP OBTIDA, VENCIDA. Confirmar se transplante foi executado dentro da validade e se há relatório fotográfico comprovante.',err:null},
-        {id:'xaxins',t:'Transplante dos Xaxins — relatório fotográfico',
-         s:'08 Xaxins total (AEO+ARP) · Condicionante CVCO',
-         def:'pendencias',bl:true,attn:false,
-         dt:'Relatório fotográfico comprovando transplante dos Xaxins para novo local dentro do imóvel, antes do início das obras. Exigência expressa para emissão do CVC/SMMA.',
-         li:['05 Xaxins da AEO-23000671','03 Xaxins da ARP-23002086','Relatório fotográfico elaborado por responsável técnico'],
-         warn:null,err:'BLOQUEANTE: sem relatório fotográfico aprovado pela SMMA o CVC não é emitido e consequentemente o CVCO é bloqueado.'},
-        {id:'arvores',t:'Manutenção das árvores isoladas remanescentes',
-         s:'Condicionante do CVC/SMMA',
-         def:'pendencias',bl:true,attn:false,
-         dt:'A AEO condiciona o CVC à manutenção das árvores isoladas conforme parecer técnico. Necessário relatório fotográfico e conferência das árvores preservadas.',
-         li:['33 árvores dentro do imóvel (nativas e exóticas) a serem preservadas','13 em bem público (verificar preservação)','Relatório fotográfico das árvores mantidas'],
-         warn:null,err:'BLOQUEANTE para o CVC/SMMA.'},
-        {id:'comp',t:'Compensação Florestal — 100 mudas nativas',
-         s:'Art. 19 e 21 Lei 9806/2000 · Condicionante CVCO',
-         def:'pendencias',bl:true,attn:false,
-         dt:'100 mudas nativas da região de Curitiba: 20 pelo corte de árvores + 80 pela área construída. Plantio na área permeável (686,73 m²) ou doação ao Horto da Barreirinha.',
-         li:['Mudas plantio: altura mínima 1,5m, identificadas e tutoradas','Doação: mín. 1,80m — Horto Barreirinha (3585-3171)','A soma plantio + doação deve = 100 mudas','Relatório fotográfico e comprovantes'],
-         warn:null,err:'BLOQUEANTE para o CVC/SMMA e consequentemente para o CVCO.'},
       ]},
       {ph:'RESÍDUOS DA CONSTRUÇÃO (SMMA)',col:'#2e7d32',items:[
         {id:'pgrcc',t:'PGRCC — Plano de Gerenciamento de Resíduos',
@@ -1144,26 +1205,14 @@ const LAYERS = [
          dt:'Consolidar todos os Manifestos de Transporte de Resíduos (MTR) emitidos pelo SINIR e os respectivos Certificados de Destinação Final (CDF) ao longo da obra.',
          li:['MTRs por transportadora contratada — SINIR','CDFs de cada destinador licenciado','Transportadores com licença ambiental vigente','Destinadores com licença ambiental vigente'],
          warn:null,err:null},
-        {id:'rgrcc',t:'RGRCC — Relatório Final de Resíduos (SMMA)',
-         s:'A apresentar ao fim da obra · Condicionante CVCO',
-         def:'pendencias',bl:true,attn:false,
-         dt:'Relatório de execução do PGRCC. Submetido ao final da obra para deferimento pela SMMA. Antecessor: MTRs e CDFs consolidados.',
-         li:['Compilação de todos os MTRs e CDFs','Portaria 280/2020 do Ministério do Meio Ambiente','Submeter via sistema SMMA para deferimento'],
-         warn:null,err:'BLOQUEANTE — condicionante explícita do Alvará 395161.'},
-        {id:'cvc',t:'CVC — Certificado de Vistoria de Conclusão (SMMA)',
-         s:'A solicitar após conclusão · Condicionante CVCO',
-         def:'pendencias',bl:true,attn:false,
-         dt:'Emitido pela SMMA após vistoria in loco e comprovação de todas as condicionantes ambientais. Antecessores: RGRCC deferido + CVC+ compensação florestal + transplantes documentados.',
-         li:['RGRCC deferido','100 mudas comprovadas','Relatório fotográfico dos transplantes de Xaxins','Manutenção das árvores isoladas confirmada','Vistoria física pela SMMA/MALF'],
-         warn:null,err:'BLOQUEANTE — Alvará exige "CVC emitido e deferido pela SMMA" para o CVCO.'},
       ]},
       {ph:'CORPO DE BOMBEIROS',col:'#e24b4a',items:[
         {id:'cb_proj',t:'Projeto Preventivo Contra Incêndio (CBPR)',
          s:'Verificar status junto ao CBPR — sistema SIAPI',
-         def:'pendencias',bl:true,attn:false,
+         def:'pendencias',bl:false,attn:false,
          dt:'PCI deve estar aprovado no CBPR antes de solicitar vistoria. Verificar urgente se o projeto já foi submetido ao sistema SIAPI/CBPR.',
          li:['Sprinklers, extintores, hidrantes, iluminação emergência','Sinalização, saídas de emergência, SPDA','Pressurização de escada (verificar exigência)'],
-         warn:null,err:'BLOQUEANTE — verificar urgente o status do projeto preventivo.'},
+         warn:null,err:null},
         {id:'cb_exec',t:'Sistemas preventivos instalados',
          s:'Conforme projeto aprovado no CBPR',
          def:'pendencias',bl:false,attn:false,
@@ -1190,11 +1239,6 @@ const LAYERS = [
          def:'pendencias',bl:false,attn:false,
          dt:'Caso a vistoria do CBPR aponte não conformidades, corrigir e solicitar nova vistoria.',
          li:[],warn:null,err:null},
-        {id:'cb_cert',t:'AVCB — Auto de Vistoria Corpo de Bombeiros',
-         s:'Condicionante CVCO',
-         def:'pendencias',bl:true,attn:false,
-         dt:'AVCB emitido após aprovação na vistoria do CBPR. Obrigatório para edificações com área >750 m². Apresentar na documentação do CVCO.',
-         li:[],warn:null,err:'BLOQUEANTE — condicionante explícita do Alvará 395161.'},
       ]},
       {ph:'SANEPAR',col:'#5b9cf6',items:[
         {id:'san_viab',t:'Viabilidade técnica Sanepar',
@@ -1218,19 +1262,8 @@ const LAYERS = [
          def:'solicitar',bl:false,attn:false,
          dt:'Ligação definitiva de esgoto na rede pública (DN150mm cerâmica em frente ao imóvel).',
          li:[],warn:null,err:null},
-        {id:'san_laudo',t:'Laudo Sanepar — destinação correta do esgoto',
-         s:'Após ligação efetivada · Condicionante CVCO',
-         def:'pendencias',bl:true,attn:false,
-         dt:'Após ligação efetivada, solicitar laudo à Sanepar confirmando que o esgoto está sendo destinado corretamente à rede pública coletora.',
-         li:[],warn:null,err:'BLOQUEANTE — condicionante explícita do Alvará 395161.'},
       ]},
       {ph:'REGULARIDADE FISCAL',col:'#639922',items:[
-        {id:'iss',t:'Regularidade ISS — mão de obra',
-         s:'Leis Compl. 40/01 e 80/11 · Certidão SMF Curitiba',
-         def:'pendencias',bl:true,attn:false,
-         dt:'Demonstrar regularidade quanto ao ISS sobre a mão de obra de execução perante a Secretaria Municipal de Finanças.',
-         li:['Certidão negativa de débitos municipais SMF','Verificar retenção ISS de empresas de fora de Curitiba'],
-         warn:null,err:'BLOQUEANTE — condicionante explícita do Alvará 395161.'},
         {id:'cno',t:'CNO / Documentação previdenciária da obra',
          s:'INSS · Cadastro Nacional de Obras',
          def:'pendencias',bl:false,attn:false,
@@ -1239,17 +1272,6 @@ const LAYERS = [
          warn:'Verificar com o contador/advogado se há exigência específica no processo de CVCO.',err:null},
       ]},
       {ph:'CONDICIONANTES SMU',col:'#534ab7',items:[
-        {id:'cotas',t:'Quitação de cotas — Certidão 1064',
-         s:'Processo 00-019501/2023 · Trâmite interno SMU',
-         def:'pendencias',bl:true,attn:false,
-         dt:'Comprovar quitação das cotas de Potencial Construtivo da certidão nº 1064 junto à SMU, em trâmite interno.',
-         li:[],warn:null,err:'BLOQUEANTE — condicionante explícita do Alvará 395161.'},
-        {id:'agua_rac',t:'Dispositivos de uso racional de água',
-         s:'Decreto Municipal 1007/2020',
-         def:'pendencias',bl:false,attn:false,
-         dt:'Instalar e documentar os dispositivos de uso e conservação racional de água conforme Decreto 1007/2020.',
-         li:['Hidrômetros individualizados por unidade','Dispositivos economizadores em torneiras e duchas','Sistema de captação/reaproveitamento de água pluvial (verificar se aplicável ao projeto)','Fotos e laudo de comprovação para vistoria'],
-         warn:null,err:null},
         {id:'passeio',t:'Passeio público executado',
          s:'Calçada conforme padrão SMU / quadra',
          def:'pendencias',bl:false,attn:false,
@@ -1259,11 +1281,6 @@ const LAYERS = [
          s:'Lei Municipal 15837/2021',
          def:'pendencias',bl:false,attn:false,
          dt:'Instalar dispositivos de bloqueio em janelas e varandas das áreas de uso comum do condomínio conforme Lei 15837/2021.',
-         li:[],warn:null,err:null},
-        {id:'taxas',t:'Taxas de vistoria SMU — quitadas',
-         s:'Guia de recolhimento a calcular (12.156,45 m²)',
-         def:'pendencias',bl:false,attn:false,
-         dt:'Solicitar guia junto à SMU (DECE), calcular sobre a área total e efetuar pagamento antes do protocolo.',
          li:[],warn:null,err:null},
         {id:'dossie',t:'Dossiê fotográfico do CVCO',
          s:'Decreto 952/2021 · Antes do protocolo',
@@ -1296,13 +1313,6 @@ const LAYERS = [
          li:['Registro em cartório de imóveis','Averbação nas matrículas individuais','Necessário para entrega das unidades','Necessário para financiamentos bancários'],
          warn:null,err:null},
       ]},
-    ]
-  },
-  {
-    id:'op', label:'ANTECESSORAS OPERACIONAIS — Copel · Elevadores · Gás · Ligações definitivas',
-    badge:'op', badgeText:'Camada 2 — Antecessoras operacionais (entrega e funcionamento)',
-    desc:'Essenciais para entrega e funcionamento do edifício. Copel é antecessora direta do Corpo de Bombeiros — sem energia definitiva os sistemas preventivos não podem ser testados e comissionados.',
-    phases:[
       {ph:'COPEL / ENERGIA ELÉTRICA',col:'#f5a623',items:[
         {id:'cop_proj',t:'Projeto elétrico da entrada aprovado — Copel',
          s:'PE 02708/2023 · Aprovado Set/2023',
@@ -1394,37 +1404,13 @@ const LAYERS = [
          li:[],warn:null,err:null},
       ]},
     ]
-  },
-  {
-    id:'par', label:'ENTREGAS TÉCNICAS PARALELAS — Manual · As-built · Averbação · Condomínio',
-    badge:'par', badgeText:'Camada 3 — Entregas técnicas para operação do edifício',
-    desc:'Itens necessários para a entrega operacional do empreendimento aos adquirentes. Não são condicionantes expressas do CVCO, mas são exigíveis na entrega das unidades e operação do condomínio.',
-    phases:[
-      {ph:'DOCUMENTAÇÃO DE ENTREGA',col:'#5b9cf6',items:[
-        {id:'manual',t:'Manual do proprietário / do síndico',
-         s:'Entrega das unidades',
-         def:'pendencias',bl:false,attn:false,
-         dt:'Manual com instruções de uso, manutenção e garantias dos sistemas construtivos, conforme ABNT NBR 14037.',
-         li:[],warn:null,err:null},
-        {id:'as_built',t:'Projetos as-built',
-         s:'Todas as disciplinas',
-         def:'pendencias',bl:false,attn:false,
-         dt:'Projetos conforme construído (as-built) de todas as disciplinas: arquitetura, estrutura, hidráulica, elétrica, gás, SPDA, etc.',
-         li:[],warn:null,err:null},
-        {id:'averbacao',t:'Averbação da construção no CRI',
-         s:'Cartório de Registro de Imóveis',
-         def:'pendencias',bl:false,attn:false,
-         dt:'Após CVCO emitido, averbar a construção nas matrículas do terreno e individualizar as unidades. Necessário para financiamentos e transferência de propriedade.',
-         li:[],warn:null,err:null},
-      ]},
-    ]
   }
 ];
 
 // ── STORAGE ──────────────────────────────────────────────────────────────────
 const KEY='cvco_v5';
-const BACKUP_DATA={"arp":{"title":"ARP — Autorização Remoção de Vegetação","subtitle":"ARP-23002086 · Obtida ✓ · VENCEU em 15/05/2024","status":"atencao","resp":"Bernardo","date":"2026-05-09","detail":"Autorizou transplante de 03 Xaxins (Dicksonia sellowiana). Obtida em 17/11/2023. Venceu em 15/05/2024 (180 dias). Documento obtido, mas verificar se o transplante foi executado dentro da validade.","notes":""},"aeo":{"title":"AEO — Autorização Ambiental Execução de Obra","subtitle":"AEO-23000671 · Obtida ✓ · VENCEU em 11/07/2025","status":"atencao","resp":"Bernardo","date":"","detail":"Emitida pela SMMA em 12/07/2023. Documento obtido, mas vencido em 11/07/2025. Verificar necessidade de regularização ou prorrogação junto à SMMA para fins do CVC.","notes":""},"xaxins":{"title":"Transplante dos Xaxins — relatório fotográfico","subtitle":"08 Xaxins total (AEO+ARP) · Condicionante CVCO","status":"andamento","resp":"Bernardo","date":"","detail":"Relatório fotográfico comprovando transplante dos Xaxins para novo local dentro do imóvel, antes do início das obras. Exigência expressa para emissão do CVC/SMMA.","notes":""},"arvores":{"title":"Manutenção das árvores isoladas remanescentes","subtitle":"Condicionante do CVC/SMMA","status":"andamento","resp":"Arnaldo","date":"","detail":"A AEO condiciona o CVC à manutenção das árvores isoladas conforme parecer técnico. Necessário relatório fotográfico e conferência das árvores preservadas.","notes":""},"comp":{"title":"Compensação Florestal — 100 mudas nativas","subtitle":"Art. 19 e 21 Lei 9806/2000 · Condicionante CVCO","status":"pendencias","resp":"Evandro","date":"","detail":"100 mudas nativas da região de Curitiba: 20 pelo corte de árvores + 80 pela área construída. Plantio na área permeável (686,73 m²) ou doação ao Horto da Barreirinha.","notes":"","comments":[{"text":"MDGP aprovar aditivo.","done":false,"date":"2026-05-14T19:55:53.820Z"}]},"conf_projeto":{"title":"Conferência obra executada × projeto aprovado","subtitle":"Antes do protocolo de CVCO","status":"pendencias","resp":"Mário","date":"","detail":"Conferência física entre a obra executada e o projeto aprovado: implantação, fachada, áreas, acessos, vagas, permeabilidade, lixeiras, passeio, rampas e uso dos ambientes.","notes":""},"alvara":{"title":"Alvará de construção nº 395161","subtitle":"2ª via · Emitido 29/11/2023 · Prazo obra: 27/07/2026","status":"atencao","resp":"Evandro","date":"","detail":"Segunda via emitida pela SMU. 28 unidades · 8 pavimentos · 74 vagas · 12.156,45 m².","notes":"","preds":[],"comments":[{"text":"Solicitar renovação do alvará","done":false,"date":"2026-05-14T19:28:37.130Z"}]},"agua_rac":{"resp":"Mário","date":"2026-05-13"},"mtr":{"status":"andamento","resp":"Bernardo"},"rgrcc":{"status":"andamento","resp":"Bernardo"},"cvc":{"resp":"Mário"},"cb_proj":{"status":"ok","title":"Projeto Preventivo Contra Incêndio (CBPR)","subtitle":"Verificar status junto ao CBPR — sistema SIAPI","resp":"","date":"","detail":"PCI deve estar aprovado no CBPR antes de solicitar vistoria. Verificar urgente se o projeto já foi submetido ao sistema SIAPI/CBPR.","notes":"","preds":[]},"cb_exec":{"resp":"Jeferson"},"cb_comm":{"resp":"Jeferson"},"cb_vistoria":{"resp":"Mário","deleted":true},"cb_corr":{"deleted":true},"cb_cert":{"resp":"Mário"},"san_viab":{"deleted":true},"san_lig":{"resp":"Mário"},"san_esg":{"resp":"Mário"},"san_laudo":{"resp":"Mário"},"iss":{"resp":"MDGP"},"cno":{"resp":"Rogério"},"cotas":{"resp":"MDGP"},"passeio":{"resp":"Mário","deleted":true},"janelas":{"resp":"Evandro"},"taxas":{"resp":"Rogério"},"dossie":{"resp":"Laura"},"termos":{"resp":"MDGP"},"protocolo":{"resp":"Mário"},"vistoria":{"resp":"Mário"},"cvco":{"deleted":true},"cop_carta":{"status":"ok"},"cop_exec":{"status":"andamento"},"elev_inst":{"status":"andamento"},"elev_lib":{"deleted":true},"gas_exec":{"status":"andamento"},"gas_art":{"status":"andamento"},"gas_estanq":{"status":"andamento"},"manual":{"status":"andamento"},"as_built":{"status":"andamento"},"averbacao":{"deleted":true}};
-const BACKUP_DELETED=[{"id":"cb_corr","name":"Correções pós-vistoria CBPR (se houver)"},{"id":"cb_vistoria","name":"Solicitação de vistoria ao CBPR"},{"id":"san_viab","name":"Viabilidade técnica Sanepar"},{"id":"passeio","name":"Passeio público executado"},{"id":"cvco","name":"✓ CVCO EMITIDO — Habite-se"},{"id":"elev_lib","name":"Liberação dos elevadores — DRT/INMETRO"},{"id":"averbacao","name":"Averbação da construção no CRI"}];
+const BACKUP_DATA={"arp":{"title":"ARP — Autorização Remoção de Vegetação","subtitle":"ARP-23002086 · Obtida ✓ · VENCEU em 15/05/2024","status":"atencao","resp":"Bernardo","date":"2026-05-09","detail":"Autorizou transplante de 03 Xaxins (Dicksonia sellowiana). Obtida em 17/11/2023. Venceu em 15/05/2024 (180 dias). Documento obtido, mas verificar se o transplante foi executado dentro da validade.","notes":""},"aeo":{"title":"AEO — Autorização Ambiental Execução de Obra","subtitle":"AEO-23000671 · Obtida ✓ · VENCEU em 11/07/2025","status":"atencao","resp":"Bernardo","date":"","detail":"Emitida pela SMMA em 12/07/2023. Documento obtido, mas vencido em 11/07/2025. Verificar necessidade de regularização ou prorrogação junto à SMMA para fins do CVC.","notes":""},"xaxins":{"title":"Transplante dos Xaxins — relatório fotográfico","subtitle":"08 Xaxins total (AEO+ARP) · Condicionante CVCO","status":"andamento","resp":"Bernardo","date":"","detail":"Relatório fotográfico comprovando transplante dos Xaxins para novo local dentro do imóvel, antes do início das obras. Exigência expressa para emissão do CVC/SMMA.","notes":""},"arvores":{"title":"Manutenção das árvores isoladas remanescentes","subtitle":"Condicionante do CVC/SMMA","status":"andamento","resp":"Arnaldo","date":"","detail":"A AEO condiciona o CVC à manutenção das árvores isoladas conforme parecer técnico. Necessário relatório fotográfico e conferência das árvores preservadas.","notes":""},"comp":{"title":"Compensação Florestal — 100 mudas nativas","subtitle":"Art. 19 e 21 Lei 9806/2000 · Condicionante CVCO","status":"pendencias","resp":"Evandro","date":"","detail":"100 mudas nativas da região de Curitiba: 20 pelo corte de árvores + 80 pela área construída. Plantio na área permeável (686,73 m²) ou doação ao Horto da Barreirinha.","notes":"","comments":[{"text":"MDGP aprovar aditivo.","done":false,"date":"2026-05-14T19:55:53.820Z"}]},"conf_projeto":{"title":"Conferência obra executada × projeto aprovado","subtitle":"Antes do protocolo de CVCO","status":"pendencias","resp":"Mário","date":"","detail":"Conferência física entre a obra executada e o projeto aprovado: implantação, fachada, áreas, acessos, vagas, permeabilidade, lixeiras, passeio, rampas e uso dos ambientes.","notes":""},"alvara":{"title":"Alvará de construção nº 395161","subtitle":"2ª via · Emitido 29/11/2023 · Prazo obra: 27/07/2026","status":"atencao","resp":"Evandro","date":"","detail":"Segunda via emitida pela SMU. 28 unidades · 8 pavimentos · 74 vagas · 12.156,45 m².","notes":"","preds":[],"comments":[{"text":"Solicitar renovação do alvará","done":false,"date":"2026-05-14T19:28:37.130Z"}]},"agua_rac":{"resp":"Mário","date":"2026-05-13"},"mtr":{"status":"andamento","resp":"Bernardo"},"rgrcc":{"status":"andamento","resp":"Bernardo"},"cvc":{"resp":"Mário"},"cb_proj":{"status":"ok","title":"Projeto Preventivo Contra Incêndio (CBPR)","subtitle":"Verificar status junto ao CBPR — sistema SIAPI","resp":"","date":"","detail":"PCI deve estar aprovado no CBPR antes de solicitar vistoria. Verificar urgente se o projeto já foi submetido ao sistema SIAPI/CBPR.","notes":"","preds":[]},"cb_exec":{"resp":"Jeferson"},"cb_comm":{"resp":"Jeferson"},"cb_vistoria":{"resp":"Mário","deleted":true},"cb_corr":{"deleted":true},"cb_cert":{"resp":"Mário"},"san_viab":{"deleted":true},"san_lig":{"resp":"Mário"},"san_esg":{"resp":"Mário"},"san_laudo":{"resp":"Mário"},"iss":{"resp":"MDGP"},"cno":{"resp":"Rogério"},"cotas":{"resp":"MDGP"},"passeio":{"resp":"Mário","deleted":true},"janelas":{"resp":"Evandro"},"taxas":{"resp":"Rogério"},"dossie":{"resp":"Laura"},"termos":{"resp":"MDGP"},"protocolo":{"resp":"Mário"},"vistoria":{"resp":"Mário"},"cvco":{"deleted":true},"cop_carta":{"status":"ok"},"cop_exec":{"status":"andamento"},"elev_inst":{"status":"andamento"},"elev_lib":{"deleted":true},"gas_exec":{"status":"andamento"},"gas_art":{"status":"andamento"},"gas_estanq":{"status":"andamento"}};
+const BACKUP_DELETED=[{"id":"cb_corr","name":"Correções pós-vistoria CBPR (se houver)"},{"id":"cb_vistoria","name":"Solicitação de vistoria ao CBPR"},{"id":"san_viab","name":"Viabilidade técnica Sanepar"},{"id":"passeio","name":"Passeio público executado"},{"id":"cvco","name":"✓ CVCO EMITIDO — Habite-se"},{"id":"elev_lib","name":"Liberação dos elevadores — DRT/INMETRO"}];
 let S=BACKUP_DATA;
 try{const _s=localStorage.getItem(KEY);if(_s)S=JSON.parse(_s);}catch(e){}
 let deletedCards=BACKUP_DELETED;
